@@ -40,8 +40,6 @@ class NaivePlanner(Planner):
                 all_plans = list(set(ranker_plans))
             else:
                 all_plans = self.plan_all_o1(g)
-            #exit(0)
-            #best_50_plans = []
             best_plan = []
             best_score = 0 
             count = 0
