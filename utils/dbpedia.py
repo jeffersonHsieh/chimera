@@ -7,7 +7,7 @@ import requests
 
 from utils.file_system import makedir
 
-cache = "/tmp/dbpedia/"
+cache = "/home/lily/ch956/chimera/dbpedia/"
 makedir(cache)
 
 DBPEDIA = "http://dbpedia.org/"

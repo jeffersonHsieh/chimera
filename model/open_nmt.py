@@ -184,7 +184,7 @@ class OpenNMTModelRunner(ModelRunner):
 
     def find_best(self, checkpoints_dir, translate_config=None):
         def checkpoint_number(checkpoint):
-            return int(checkpoint.split(".")[0].split("_")[-1])
+            return int(checkpoint.split(".")[1].split("_")[-1])
 
         checkpoints = list(sorted(listdir(checkpoints_dir), key=lambda f: checkpoint_number(f)))
 

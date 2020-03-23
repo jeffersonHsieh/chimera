@@ -3,14 +3,15 @@ import pickle
 import re
 import sys
 import zlib
-from collections import defaultdict
+from collections import defaultdict, deque
 from enum import Enum
 from functools import lru_cache
 from itertools import chain, product, permutations, combinations
 from typing import Set, List
 
 from tqdm import tqdm
-
+import sys
+sys.path.append("/home/lily/ch956/chimera/")
 from utils.delex import concat_entity
 from utils.memoize import memoize
 from utils.time import Time
@@ -43,7 +44,87 @@ class StructuredNode:
 
     def get_val(self):
         return concat_entity(self.value)
+    
 
+
+    def traverse(self, C, cur_lin, mode = ""):
+        g = C[0][1].lin()
+        e = C[0][0]
+
+        if len(C) == 1:
+            
+            for l in g:
+                #print(l)
+                if e:
+                    #print(cur_lin + mode + e + "["+l+"]")
+                    yield cur_lin + mode + e + " ["+l+"]"
+                else:
+                    #print(cur_lin + mode + l)
+                    yield cur_lin + mode + l
+        else:
+
+            for l in g:
+                #if C[0][1].value == NodeType.OR:
+                #    if l:
+                #        pass
+                        #print(l)
+                #    else:
+                #        for c in C[0][1].children:
+                #            print(c[1].value)
+                #print(l)
+                
+                if e:
+                    for l_s in self.traverse(C[1:], cur_lin + mode + e +" [" + l + "]", mode):
+                        yield l_s
+                else:
+                    for l_s in self.traverse(C[1:], cur_lin + mode + l, mode):
+                        yield l_s
+                    
+                #for l_s in self.traverse(C[1:], new_lin, mode):
+                    #yield l_s
+
+
+
+    def lin(self):
+        if self.value == NodeType.FILTER_OUT:
+            return ""
+        elif not self.children:
+            yield self.get_val()
+        elif self.value == NodeType.OR:
+            for e1,s1 in self.children:
+                lins = s1.lin()
+                for l in lins:
+                    #print(l)
+                    if e1:
+                        yield (e1+" ["+ l + "]") 
+                    else:
+                        yield l
+
+        else:
+            cur_lin = " "
+            if self.value == NodeType.SENTENCES:
+                #for c in self.children:
+                #    print(c[1].value)
+                #print('end')
+                g = self.traverse(self.children, cur_lin, mode = ". ")
+                for l in g:
+                    #print(l)
+                    yield l
+            elif self.value == NodeType.AND:
+                perm = permutations(self.children)
+                for p in perm:
+                    g = self.traverse(p, cur_lin, mode = " ")
+                    for l in g:
+                        #print(l)
+                        yield l
+            else:
+                v = self.get_val()
+                g = self.traverse(self.children, cur_lin, mode = " ")
+                for l in g:
+                    #print(v+l)
+                    yield v + " "+ l
+                
+                        
     def linearizations(self):
         if self.value == NodeType.FILTER_OUT:
             return []
@@ -77,6 +158,26 @@ class LinearNode:
         self.value = value
         self.next = next
 
+    def traverse(self):
+        if self.next is None:
+            yield [self.value]
+
+        elif self.value == NodeType.OR:
+            for n in self.next:
+                for l in n.traverse():
+                    yield l
+        else:
+            for n in self.next:
+                for l in n.traverse():
+                    yield [self.value]+l
+
+    def lin(self):
+        none_empty = (s for s in self.rec_linearizations() if len(s) > 0)
+        return (" ".join(s[:-1]) for s in none_empty if s[-1] != NodeType.FILTER_OUT)
+
+                    
+
+        
     def linearizations(self):
         none_empty = [s for s in self.rec_linearizations() if len(s) > 0]
         return [" ".join(s[:-1]) for s in none_empty if s[-1] != NodeType.FILTER_OUT]
@@ -258,45 +359,48 @@ class Compressor:
 
 
 if __name__ == "__main__":
-    g = Graph()
-    g.add_edge('A', 'B', 'b1')
-    # g.add_edge('A', 'B', 'b2')
-    g.add_edge('A', 'C', 'c')
-    g.add_edge('A', 'C', 'c2')
-    # g.add_edge('C', 'C', 'cd')
-    g.add_edge('A', 'D', 'd')
-    g.add_edge('D', 'E', 'e')
-    g.add_edge('A', 'E', 'e')
-
-    now = Time.now()
-    plans = list(g.exhaustive_plan(force_tree=False).linearizations())
-
-    print("exhaustive_plan", len(plans))
-    print(plans[0])
-    print(plans[-1])
-    print(Time.passed(now))
-
-    print("memory size", sys.getsizeof(pickle.dumps(plans)) / 1024)
-    plans_str = "\n".join(plans).encode("utf-8")
-    compressed = zlib.compress(plans_str, 1)
-    print("zlib size", sys.getsizeof(pickle.dumps(compressed)) / 1024)
-
-    compressor = Compressor()
-    plans = [compressor.compress(p) for p in plans]
-    print("compressor size", sys.getsizeof(pickle.dumps({"p": plans, "c": compressor})) / 1024)
-
-    plans_str = "\n".join(plans).encode("utf-8")
-    print("compressor zlib size", sys.getsizeof(pickle.dumps({"p": zlib.compress(plans_str, 1), "c": compressor})) / 1024)
-
+    # g = Graph()
+    # g.add_edge('A', 'B', 'b1')
+    # # g.add_edge('A', 'B', 'b2')
+    # g.add_edge('A', 'C', 'c')
+    # g.add_edge('A', 'C', 'c2')
+    # # g.add_edge('C', 'C', 'cd')
+    # g.add_edge('A', 'D', 'd')
+    # g.add_edge('D', 'E', 'e')
+    # g.add_edge('A', 'E', 'e')
 
     # now = Time.now()
-    # for i in range(1000):
-    #     plans = g.plan_all().linearizations()
+    # plans = list(g.exhaustive_plan(force_tree=False).linearizations())
+
+    # all = g.plan_all()
+    # print(type(all))
+
+
+    # print("exhaustive_plan", len(plans))
+    # print(plans[0])
+    # print(plans[-1])
+    # print(Time.passed(now))
+
+    # print("memory size", sys.getsizeof(pickle.dumps(plans)) / 1024)
+    # plans_str = "\n".join(plans).encode("utf-8")
+    # compressed = zlib.compress(plans_str, 1)
+    # print("zlib size", sys.getsizeof(pickle.dumps(compressed)) / 1024)
+
+    # compressor = Compressor()
+    # plans = [compressor.compress(p) for p in plans]
+    # print("compressor size", sys.getsizeof(pickle.dumps({"p": plans, "c": compressor})) / 1024)
+
+    # plans_str = "\n".join(plans).encode("utf-8")
+    # print("compressor zlib size", sys.getsizeof(pickle.dumps({"p": zlib.compress(plans_str, 1), "c": compressor})) / 1024)
+
+   
+    # now = Time.now()
+    # plans = g.plan_all().linearizations()
     # print("plan_all", len(plans))
     # for p in plans:
     #     print(p)
     # print(Time.passed(now))
-    #
+    
     # now = Time.now()
     # for i in range(1000):
     #     plans = g.traverse_all().linearizations()
@@ -305,41 +409,44 @@ if __name__ == "__main__":
     #     print(p)
     # print(Time.passed(now))
 
-    #
+    
     # plans = g.constraint_graphs_plan([
     #     {'must_include': set({"A", "B"}), 'must_exclude': set({})},
     #     {'must_include': set({"A", "C"}), 'must_exclude': set({})},
     #     {'must_include': set({"B", "D", "E"}), 'must_exclude': set({})}]).linearizations()
-    #
+    
     # print("constraint", len(plans))
-    #
+    
     # for p in plans:
     #     print(p)
-    #
+    
     # print()
-    #
-    # rdfs = [('William_Anders', 'dateOfRetirement', '"1969-09-01"'), ('William_Anders', 'was selected by NASA', '1963'),
-    #         ('William_Anders', 'timeInSpace', '"8820.0"(minutes)'), ('William_Anders', 'birthDate', '"1933-10-17"'),
-    #         ('William_Anders', 'occupation', 'Fighter_pilot'), ('William_Anders', 'birthPlace', 'British_Hong_Kong'),
-    #         ('William_Anders', 'was a crew member of', 'Apollo_8')]
-    # s = Graph(rdfs)
-    # # s.add_edge('A', 'B', 'b')
-    # # s.add_edge('A', 'C', 'c')
-    # # s.add_edge('A', 'D', 'd')
-    # # s.add_edge('A', 'E', 'e')
-    # # s.add_edge('A', 'F', 'f')
-    # # s.add_edge('A', 'G', 'g')
-    # # s.add_edge('A', 'H', 'h')
-    # # s.add_edge('A', 'I', 'i')
-    # # s.add_edge('A', 'J', 'j')
-    # # s.add_edge('A', 'K', 'k')
-    #
-    # print("exhaustive")
-    # now = Time.now()
-    # plans = s.exhaustive_plan().linearizations()
-    # print(len(plans), "plans")
-    # print(Time.passed(now))
-    #
+    
+    rdfs = [('William_Anders', 'dateOfRetirement', '"1969-09-01"'), ('William_Anders', 'was selected by NASA', '1963'),
+            ('William_Anders', 'timeInSpace', '"8820.0"(minutes)'), ('William_Anders', 'birthDate', '"1933-10-17"'),
+            ('William_Anders', 'occupation', 'Fighter_pilot'), ('William_Anders', 'birthPlace', 'British_Hong_Kong'),
+            ('William_Anders', 'was a crew member of', 'Apollo_8')]
+    s = Graph(rdfs)
+    s.add_edge('A', 'B', 'b')
+    s.add_edge('A', 'C', 'c')
+    s.add_edge('A', 'D', 'd')
+    s.add_edge('A', 'E', 'e')
+    s.add_edge('A', 'F', 'f')
+    s.add_edge('A', 'G', 'g')
+    s.add_edge('A', 'H', 'h')
+    s.add_edge('A', 'I', 'i')
+    s.add_edge('A', 'J', 'j')
+    s.add_edge('A', 'K', 'k')
+    
+    print("exhaustive")
+    now = Time.now()
+    plans = s.exhaustive_plan()
+    print('linearizing!!!!!!!')
+    lins = plans.linearizations(low_mem = True)
+    for l in lins:
+        print(l)
+    print(Time.passed(now))
+    
     # print("constraint")
     # now = Time.now()
     # plans = s.constraint_graphs_plan([

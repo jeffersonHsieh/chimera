@@ -23,6 +23,9 @@ class Planner:
 
     def plan_all(self, g: Graph):
         return g.exhaustive_plan(force_tree=False).linearizations()
+    def plan_all_o1(self, g: Graph):
+        graph = g.exhaustive_plan(force_tree=False)
+        return graph.lin()
 
     def plan_random(self, g: Graph, amount: int):
         all_plans = self.plan_all(g)

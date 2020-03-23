@@ -25,8 +25,11 @@ TrainingPreProcessPipeline = ParallelPipeline()
 TrainingPreProcessPipeline.enqueue("train", "Training Set", CorpusPreProcessPipeline.mutate({"set": DataSetType.TRAIN}))
 TrainingPreProcessPipeline.enqueue("dev", "Dev Set", CorpusPreProcessPipeline.mutate({"set": DataSetType.DEV}))
 
-TestCorpusPreProcessPipeline.enqueue("plan", "Generate best plan",
-                                     lambda f, x: f["entities"].copy().create_plans(x["train-planner"]))
+#TestPlanSubPipeline = Pipeline()
+
+TestCorpusPreProcessPipeline.enqueue("plan", "Generate best plan", lambda f, x: f["entities"].copy().create_plans(x["train-planner"], low_mem = x["config"].low_mem, type = DataSetType.TEST))
+                                     # TestPlanSubPipeline.mutate())
+                                     # ^these are methods of the Dataset class in data/reader.py
 TestCorpusPreProcessPipeline.enqueue("timing", "Chart the timing",
                                      lambda f, x: error_bar(f["plan"].timing, "Time (seconds)", "#Edges"), ext="pdf")
 TestCorpusPreProcessPipeline.enqueue("tokenize", "Tokenize Plans", lambda f, _: f["plan"].copy().tokenize_plans())

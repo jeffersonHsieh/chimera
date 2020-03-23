@@ -1,7 +1,8 @@
 import sys
 
 sys.path.append("../")
-
+sys.path.append('/data/lily/ch956/chimera/')
+#print(sys.path)
 import argparse
 import os
 
@@ -18,6 +19,7 @@ from scorer.splitting_tendencies import SplittingTendenciesExpert
 from utils.delex import concat_entity
 from utils.graph import Graph
 from data.WebNLG.reader import WebNLGDataReader
+from reg.bert import BertREG
 
 naive_planner = NaivePlanner(WeightedProductOfExperts([
         RelationDirectionExpert,
@@ -29,11 +31,13 @@ naive_planner = NaivePlanner(WeightedProductOfExperts([
 server_config = {
     "port": 5001,
     "reader": WebNLGDataReader,
-    "planner": naive_planner
+    "planner": naive_planner,
+    "low_mem": True,
+    "reg": BertREG
 }
 
 dataset_name = server_config["reader"].DATASET
-main_config = Config(reader=server_config["reader"], planner=server_config["planner"])
+main_config = Config(reader=server_config["reader"], planner=server_config["planner"], low_mem=server_config["low_mem"], reg = server_config["reg"])
 
 base_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -92,11 +96,11 @@ def server(pipeline_res, host, port, debug=True):
 
 if __name__ == "__main__":
     res = MainPipeline.mutate({"config": main_config}).execute(dataset_name, cache_name=dataset_name)
-
+    #res contains the pipeline process(requests), then these requests are sent to the server in the last line
     parser = argparse.ArgumentParser(description="Chimera REST Server")
     parser.add_argument("--ip", type=str, default="0.0.0.0")
     parser.add_argument("--port", type=int, default="5001")
     parser.add_argument("--debug", "-d", action="store_true")
     args = parser.parse_args()
-
+    print("BLEU", res["evaluate"]["bleu"])
     server(res, host=args.ip, port=args.port, debug=args.debug)

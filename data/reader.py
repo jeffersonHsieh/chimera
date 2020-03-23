@@ -4,9 +4,10 @@ import re
 import zlib
 from collections import defaultdict, Counter
 from enum import Enum
-from itertools import chain
+from itertools import chain, product
 from multiprocessing.pool import Pool
 from typing import List, Tuple, Dict, Callable
+import os
 
 import numpy as np
 from tqdm import tqdm
@@ -21,6 +22,12 @@ from utils.graph import Graph
 from utils.out_of import out_of
 from utils.relex import get_entities
 from utils.tokens import SPLITABLES, tokenize, tokenize_sentences
+
+from utils.pipeline import cache_dir, CachedDict
+print(cache_dir)
+temp_cache_dir = cache_dir+"/WebNLG/test_preprocess_cache"
+if not os.path.exists(temp_cache_dir):
+    os.makedirs(temp_cache_dir)
 
 
 class DataSetType(Enum):
@@ -202,24 +209,44 @@ class DataReader:
         self.data = [d.set_plans(graph_plans[d.graph.unique_key()]) for d in self.data]
         return self
 
-    def create_plans(self, planner):
+    def create_plans(self, planner, low_mem = False, type = DataSetType.TRAIN):
         assert planner is not None
 
         unique = {d.graph.unique_key(): d.graph for d in self.data}
         unique_graphs = list(reversed(list(unique.values())))
+        if planner.is_parallel:
+            pool = Pool(multiprocessing.cpu_count() - 1)
+            plans = list(tqdm(pool.imap(planner.plan_best_unpack, product(unique_graphs, [low_mem])), total=len(unique_graphs)))
+        else:
+            plans = []
+            for num, g in enumerate(tqdm(unique_graphs)):
+                #if num < 860:
+                #    continue
+                start = time.time()
+                if low_mem and type == DataSetType.TEST:
+                    pn = os.path.join(temp_cache_dir, str(num))
+                    pnf = pn + '.sav'
+                    if os.path.isfile(pnf):
+                        #print(num)
+                        #print('cache exists')
+                        continue
+                    best_plans =  planner.plan_best(g)
+                    with open(pnf, 'wb') as f:
+                        #f.write('\n'.join(best_plans))
+                        pickle.dump(best_plans,f)
+                else:
+                    plans.append(planner.plan_best(g, low_mem = low_mem))
+                g_size = len(g.edges)
+                if g_size not in self.timing:
+                    self.timing[g_size] = []
+                self.timing[g_size].append(time.time() - start)
+        if low_mem and type == DataSetType.TEST:
+            for num, g in enumerate(tqdm(unique_graphs)):
+                pn = os.path.join(temp_cache_dir, str(num))
+                pnf = pn + '.sav'
+                with open(pnf, 'rb') as f:
+                    plans.append(pickle.load(f))
 
-        # if planner.is_parallel:
-        #     pool = Pool(multiprocessing.cpu_count() - 1)
-        #     plans = list(tqdm(pool.imap(planner.plan_best, unique_graphs), total=len(unique_graphs)))
-        # else:
-        plans = []
-        for g in tqdm(unique_graphs):
-            start = time.time()
-            plans.append(planner.plan_best(g))
-            g_size = len(g.edges)
-            if g_size not in self.timing:
-                self.timing[g_size] = []
-            self.timing[g_size].append(time.time() - start)
 
         graph_plan = {g.unique_key(): p for g, p in zip(unique_graphs, plans)}
         for d in self.data:

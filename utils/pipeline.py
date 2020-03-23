@@ -28,7 +28,7 @@ class CachedDict:
 
     def load_cache(self, key: str):
         cache_location = self.cache_dict[key]
-        # print("Loading", key, ":", cache_location, "from cache")
+        #print("Debug msg:", "Loading", key, ":", cache_location, "from cache")
 
         if cache_location not in CachedDict.loaded_cache:
             f = open(cache_location, "rb")
@@ -36,6 +36,7 @@ class CachedDict:
             CachedDict.loaded_cache[cache_location] = pickle.load(f) if ext == "sav" else f.read()
             f.close()
         self.val_dict[key] = CachedDict.loaded_cache[cache_location]
+        #print("Debug: loaded cache", self.loaded_cache)
         del self.cache_dict[key]
         return self.val_dict[key]
 
@@ -92,6 +93,7 @@ class Pipeline:
         self.global_timer = None
         self.key = key
 
+    #makes a 'copy' of this Pipeline
     def mutate(self, params=None):
         new = Pipeline(params if params else self.initial_params)
         new.queue = list(self.queue)
@@ -138,19 +140,25 @@ class Pipeline:
             pn = path.join(previous_name, qi.key)
             pnf = pn + "." + qi.ext
 
+            # if we have cache, load cache
             if qi.load_cache and path.isfile(pnf):
                 params.add_cache(qi.key, pnf)
                 if qi.load_self:
                     params.load_cache(qi.key)
             else:
+                # if not cache, and if this is a subpipeline, execute subpipeline
                 if isinstance(qi.method, Pipeline):
                     params[qi.key] = qi.method.execute(run_name=qi.name, tabs=tabs + 1,
                                                             x_params=x_params.union(params), previous_name=pn)
                     if isinstance(params[qi.key], CachedDict) and "out" in params[qi.key]:
                         params.copy_key(qi.key, params[qi.key], "out")
                 else:
+                # if this is not a subpipeline, use the method given to execute on the params(which 
+                # would contain previously executed results as key-value pairs, i.e. the params[qi.key])
                     if self.mute:
                         Silencer.mute()
+                    #marking error at this line when it's a translate pipeline instance
+                    #print('debug msg:', x_params.val_dict, x_params.cache_dict)
                     params[qi.key] = qi.method(params, x_params)
                     if self.mute:
                         Silencer.unmute()

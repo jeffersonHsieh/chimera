@@ -24,7 +24,7 @@ from utils.pipeline import Pipeline
 
 
 class Config:
-    def __init__(self, reader: DataReader = None, planner: Planner = None, reg: REG = None, test_reader: DataReader = None):
+    def __init__(self, reader: DataReader = None, planner: Planner = None, reg: REG = None, test_reader: DataReader = None, low_mem: bool = None):
         self.reader = {
             DataSetType.TRAIN: reader,
             DataSetType.DEV: reader,
@@ -32,6 +32,7 @@ class Config:
         }
         self.planner = planner
         self.reg = reg
+        self.low_mem = low_mem
 
 
 MainPipeline = Pipeline()
@@ -54,7 +55,7 @@ if __name__ == "__main__":
     # combined_planner = CombinedPlanner((neural_planner, naive_planner))
     config = Config(reader=WebNLGDataReader,
                     planner=neural_planner,
-                    reg=BertREG)
+                    reg=BertREG, low_mem=False)
 
     res = MainPipeline.mutate({"config": config}).execute("WebNLG", cache_name="WebNLG")
 
