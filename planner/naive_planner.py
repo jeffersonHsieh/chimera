@@ -68,11 +68,8 @@ class NaivePlanner(Planner):
                     heappushpop(best_50_plans, (score,p))
                 else:
                     heappushpop(best_50_plans ,(score,p))'''
-            #print(best_plan)
-            #best_50_plans = [p for s,p in best_50_plans]
 
             print(count)
-            #print(best_50_plans)
             return best_plan
         if ranker_plans:
             all_plans = list(set(ranker_plans))
