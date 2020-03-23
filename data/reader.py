@@ -220,22 +220,17 @@ class DataReader:
         else:
             plans = []
             for num, g in enumerate(tqdm(unique_graphs)):
-                #if num < 860:
-                #    continue
                 start = time.time()
-                if low_mem and type == DataSetType.TEST:
+                '''if low_mem and type == DataSetType.TEST:
                     pn = os.path.join(temp_cache_dir, str(num))
                     pnf = pn + '.sav'
                     if os.path.isfile(pnf):
-                        #print(num)
-                        #print('cache exists')
                         continue
                     best_plans =  planner.plan_best(g)
                     with open(pnf, 'wb') as f:
-                        #f.write('\n'.join(best_plans))
-                        pickle.dump(best_plans,f)
-                else:
-                    plans.append(planner.plan_best(g, low_mem = low_mem))
+                        pickle.dump(best_plans,f)'''
+                #else:
+                plans.append(planner.plan_best(g, low_mem = low_mem))
                 g_size = len(g.edges)
                 if g_size not in self.timing:
                     self.timing[g_size] = []
