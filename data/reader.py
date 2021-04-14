@@ -24,8 +24,10 @@ from utils.relex import get_entities
 from utils.tokens import SPLITABLES, tokenize, tokenize_sentences
 
 from utils.pipeline import cache_dir, CachedDict
-print(cache_dir)
-temp_cache_dir = cache_dir+"/WebNLG/test_preprocess_cache"
+temp_cache_dir = os.path.join(cache_dir,"WTQexp_naive/test_preprocess_cache")
+temp_cache_dir = os.path.join(cache_dir,"WebNLG/test_preprocess_cache")
+print(f'test create plan cache in {temp_cache_dir}')
+print('modify in general reader.py if this is a different experiment/dataset')
 if not os.path.exists(temp_cache_dir):
     os.makedirs(temp_cache_dir)
 
@@ -209,33 +211,29 @@ class DataReader:
         self.data = [d.set_plans(graph_plans[d.graph.unique_key()]) for d in self.data]
         return self
 
-    def create_plans(self, planner, low_mem = False, type = DataSetType.TRAIN):
+    def create_plans(self, planner, low_mem = True, type = DataSetType.TRAIN):
         assert planner is not None
 
         unique = {d.graph.unique_key(): d.graph for d in self.data}
         unique_graphs = list(reversed(list(unique.values())))
         if planner.is_parallel:
             pool = Pool(multiprocessing.cpu_count() - 1)
+            unique_graphs = list(enumerate(unique_graphs))
             plans = list(tqdm(pool.imap(planner.plan_best_unpack, product(unique_graphs, [low_mem])), total=len(unique_graphs)))
         else:
             plans = []
             for num, g in enumerate(tqdm(unique_graphs)):
-                #if num < 860:
-                #    continue
                 start = time.time()
                 if low_mem and type == DataSetType.TEST:
                     pn = os.path.join(temp_cache_dir, str(num))
                     pnf = pn + '.sav'
                     if os.path.isfile(pnf):
-                        #print(num)
-                        #print('cache exists')
                         continue
                     best_plans =  planner.plan_best(g)
                     with open(pnf, 'wb') as f:
-                        #f.write('\n'.join(best_plans))
                         pickle.dump(best_plans,f)
                 else:
-                    plans.append(planner.plan_best(g, low_mem = low_mem))
+                    plans.append(planner.plan_best(g))
                 g_size = len(g.edges)
                 if g_size not in self.timing:
                     self.timing[g_size] = []

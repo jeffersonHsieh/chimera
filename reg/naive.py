@@ -28,7 +28,10 @@ class NaiveREG(REG):
         number_match = re.match("^(-?(\d+|\d{1,3}(,\d{3})*)(\.\d+)?)(\"(\((.*?)\)))?$", w)
         if number_match:
             groups = number_match.groups()
-            number = float(groups[0])
+            try:
+                number = float(groups[0])
+            except ValueError:
+                number = float(groups[0].replace(',',''))
             number = int(number) if number == int(number) else number
             unit = groups[6]
             if unit:

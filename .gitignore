@@ -2,3 +2,4 @@
 libs/
 !libs/__init__.py
 cache/
+**/__pycache__

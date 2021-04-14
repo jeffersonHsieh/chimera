@@ -5,7 +5,8 @@ from os.path import isdir
 
 import xmltodict
 from tqdm import tqdm
-
+import sys
+sys.path.append('/home/lily/ch956/chimera/')
 from data.WebNLG.rephrasing import rephrase, rephrase_if_must
 from data.reader import DataReader, DataSetType, Datum
 from utils.dbpedia import get_dbpedia_entity, pronouns

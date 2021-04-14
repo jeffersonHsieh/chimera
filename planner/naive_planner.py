@@ -1,20 +1,20 @@
 import numpy as np
 from tqdm import tqdm
 from heapq import heapify, heappushpop
-
-from data.reader import DataReader
+import os
+from data.reader import DataReader, temp_cache_dir
 from planner.planner import Planner
 from scorer.scorer import Scorer
 from utils.graph import Graph
 
 import sys
-if len(sys.argv) < 2:
+'''if len(sys.argv) < 2:
     parallel = False
 elif sys.argv[1] == "parallel":
-    parallel = True
+    parallel = True'''
 
 class NaivePlanner(Planner):
-    is_parallel = parallel
+    is_parallel = False
     re_plan = "PREMADE"
 
     def __init__(self, scorer: Scorer):
@@ -32,7 +32,18 @@ class NaivePlanner(Planner):
     
     def plan_best_unpack(self, args):
         g, low_mem = args
-        return self.plan_best(g, low_mem = low_mem)
+        num = g[0]
+        g = g[1]
+        pn = os.path.join(temp_cache_dir, str(num))
+        pnf = pn + '.sav'
+        if os.path.isfile(pnf):
+            with open(pnf, 'rb') as f:
+                best_plans = pickle.load(f)
+        else:
+            best_plans = self.plan_best(g, low_mem = low_mem)
+            with open(pnf, 'wb') as f:
+                pickle.dump(best_plans,f)
+        return best_plans
 
     def plan_best(self, g: Graph, ranker_plans=None, low_mem = False):
         if low_mem:
@@ -40,13 +51,11 @@ class NaivePlanner(Planner):
                 all_plans = list(set(ranker_plans))
             else:
                 all_plans = self.plan_all_o1(g)
-            #exit(0)
-            #best_50_plans = []
+
             best_plan = []
             best_score = 0 
             count = 0
             for p in all_plans:
-                #print(p)
                 count += 1
                 pl = p.split()
                 pl = [ c for c in pl if c]
@@ -61,18 +70,8 @@ class NaivePlanner(Planner):
                     if best_plan:
                         best_plan.pop()
                     best_plan.append(p)
-                '''if len(best_50_plans)< 50:
-                    best_50_plans.append((score,p))
-                elif len(best_50_plans) == 50:
-                    heapify(best_50_plans)
-                    heappushpop(best_50_plans, (score,p))
-                else:
-                    heappushpop(best_50_plans ,(score,p))'''
-            #print(best_plan)
-            #best_50_plans = [p for s,p in best_50_plans]
 
-            print(count)
-            #print(best_50_plans)
+
             return best_plan
         if ranker_plans:
             all_plans = list(set(ranker_plans))

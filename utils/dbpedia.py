@@ -4,6 +4,10 @@ from functools import lru_cache
 from itertools import chain
 from os.path import isfile
 import requests
+try:
+    from simplejson.errors import JSONDecodeError
+except ImportError:
+    from json.decoder import JSONDecodeError
 
 from utils.file_system import makedir
 
@@ -18,7 +22,7 @@ def normalize_entity(entity: str):
     return entity \
         .replace("/", "%2F") \
         .replace("&", "%26") \
-        .replace("+", "%2B")
+        .replace("+", "%2B").strip("\\")
 
 
 @lru_cache(maxsize=None)
@@ -33,7 +37,10 @@ def get_dbpedia_entity(entity: str):
         return content
 
     r = requests.get(url=DBPEDIA + 'data/' + entity + '.json')
-    content = r.json()
+    try:
+        content = r.json()
+    except JSONDecodeError:
+        return []
 
     f = open(cache_ent, "w")
     json.dump(content, f)
@@ -54,13 +61,17 @@ gender_pronouns = {
     "male": ["he", "him", "his", "himself"],
     "female": ["she", "her", "hers", "herself"],
     "inanimate": ["it", "its", "itself"],
-    "plural": ["they", "them", "theirs"]
+    "plural": ["they", "them", "theirs"],
+    "male creature": ["he", "him", "his", "himself"],
 }
 all_pronouns = set(chain.from_iterable(gender_pronouns.values()))
 
 
 def pronouns(entity: str):
-    dbpedia = get_dbpedia_entity(entity)
+    try:
+        dbpedia = get_dbpedia_entity(entity)
+    except json.decoder.JSONDecodeError:
+        return []
 
     ent_uri = DBPEDIA + 'resource/' + entity
     gender_uri = "http://xmlns.com/foaf/0.1/gender"

@@ -121,7 +121,7 @@ class OpenNMTModel(Model):
             "replace_unk": None,
             "beam_size": opts["beam_size"],
             "n_best": n_best,
-            "batch_size": 64
+            "batch_size": 32
         })
 
         out_lines_f = open(target_path, "r", encoding="utf-8")
@@ -175,8 +175,8 @@ class OpenNMTModelRunner(ModelRunner):
         opt["data"] = save_data_dir + "data"
         opt["save_model"] = save_model
         if is_cuda:
-            opt["world_size"] = 1
-            opt["gpu_ranks"] = 0
+            opt["world_size"] = 1 #4
+            opt["gpu_ranks"] = 0 #2 3"
 
         run_param('train.py', opt)
 

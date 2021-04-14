@@ -2,6 +2,7 @@ import random
 
 from data.E2E.reader import E2EDataReader
 from data.WebNLG.reader import WebNLGDataReader
+from data.dart.reader import WTQAnnotationsDataReader
 from data.reader import DataReader, DataSetType
 from planner.naive_planner import NaivePlanner
 from planner.neural_planner import NeuralPlanner
@@ -35,33 +36,38 @@ class Config:
         self.low_mem = low_mem
 
 
-MainPipeline = Pipeline()
-MainPipeline.enqueue("pre-process", "Pre-process training data", TrainingPreProcessPipeline)
-MainPipeline.enqueue("train-planner", "Train Planner", TrainPlannerPipeline)
-MainPipeline.enqueue("train-model", "Train Model", TrainModelPipeline)
-MainPipeline.enqueue("test-corpus", "Pre-process test data", TestingPreProcessPipeline)
-MainPipeline.enqueue("train-reg", "Train Referring Expressions Generator", REGPipeline)
-MainPipeline.enqueue("translate", "Translate Test", TranslatePipeline)
-MainPipeline.enqueue("evaluate", "Evaluate Translations", EvaluationPipeline)
 
 if __name__ == "__main__":
     naive_planner = NaivePlanner(WeightedProductOfExperts([
-        RelationDirectionExpert,
-        GlobalDirectionExpert,
-        SplittingTendenciesExpert,
-        RelationTransitionsExpert
-    ]))
+         RelationDirectionExpert,
+         GlobalDirectionExpert,
+         SplittingTendenciesExpert,
+         RelationTransitionsExpert
+     ]))
+    
     neural_planner = NeuralPlanner()
-    # combined_planner = CombinedPlanner((neural_planner, naive_planner))
-    config = Config(reader=WebNLGDataReader,
-                    planner=naive_planner,
-                    reg=BertREG, low_mem=False)
 
-    res = MainPipeline.mutate({"config": config}).execute("WebNLG", cache_name="WebNLG")
+    NeuralPipeline = Pipeline()
+    #MainPipeline = Pipeline()
+    NeuralPipeline.enqueue("pre-process", "Pre-process training data", TrainingPreProcessPipeline)
+    NeuralPipeline.enqueue("train-planner", "Train Planner", TrainPlannerPipeline)
+    NeuralPipeline.enqueue("train-model", "Train Model", TrainModelPipeline)
+    NeuralPipeline.enqueue("train-reg", "Train Referring Expressions Generator", REGPipeline)
+
+    config1 = Config(reader=WTQAnnotationsDataReader,planner=neural_planner,
+                    reg=BertREG, low_mem=True)
+ 
+    test = TestingPreProcessPipeline.mutate({"config": config1})
+    NeuralPipeline.enqueue("test-corpus", "Pre-process test data", test)
+    NeuralPipeline.enqueue("translate", "Translate Test", TranslatePipeline)
+    NeuralPipeline.enqueue("evaluate", "Evaluate Translations", EvaluationPipeline)
+    
+   
+    res1 = NeuralPipeline.mutate({"config": config1}).execute("WTQtest", cache_name="WTQexp_neural")
 
     print()
 
-    d = random.choice(res["translate"].data)
+    d = random.choice(res1["translate"].data)
     print("Random Sample:")
     print("Graph:", d.graph.as_rdf())
     print("Plan:", d.plan)
@@ -70,4 +76,4 @@ if __name__ == "__main__":
 
     print()
 
-    print("BLEU", res["evaluate"]["bleu"])
+    print("Naive BLEU", res1["evaluate"]["bleu"])

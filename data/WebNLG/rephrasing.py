@@ -51,7 +51,7 @@ def rephrase(entity):
         match = re.match("^(-?(\d+|\d{1,3}(,\d{3})*)(\.\d+)?)( (\((.*?)\)))?$", p)
         if match:
             groups = match.groups()
-            number = float(groups[0])
+            number = float(groups[0].replace(',',''))
             unit = groups[6]
 
             number_phrasing = [
@@ -96,7 +96,8 @@ def rephrase(entity):
                               "inhabitants per square kilometre", "kelvins"]:
                     pass
                 else:
-                    raise ValueError(unit + " is unknown")
+                    pass
+                    #raise ValueError(unit + " is unknown")
 
                 for np in number_phrasing:
                     if couple:

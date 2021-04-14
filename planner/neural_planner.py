@@ -52,7 +52,7 @@ class Model(BaseDynetModel):
 
     def fix_out(self, plan: str):
         if not plan:
-            return None
+            return ["."]
 
         for d, r in get_relations(plan):
             plan = plan.replace(d + ' ' + r + ' [ ', d + '_' + r + '_')
@@ -101,7 +101,10 @@ class Model(BaseDynetModel):
                                               [len(nodes_stack)] + list(edges_coverage.values())])
 
         c_vec = counter_vec()
-        initial_input = dy.concatenate([dy.average(edge_reps), c_vec])
+        try:
+            initial_input = dy.concatenate([dy.average(edge_reps), c_vec])
+        except AssertionError:
+            return ""
         decoder = self.decoder.initial_state().add_input(initial_input)
 
         def choose(item):
@@ -168,11 +171,15 @@ class Model(BaseDynetModel):
 
             vocab_list = list(vocab.items())
             vocab_index = ["_".join(i[1:]) for i, _ in vocab_list]
+            #vocab_index = ["_".join(i) for i, _ in vocab_list]
 
             try:
                 if len(vocab_list) == 1:
                     if out:
-                        assert out_tokens[0] == vocab_index[0]
+                        try:
+                            assert out_tokens[0] == vocab_index[0]
+                        except AssertionError:
+                            yield ""
 
                     choice = choose(vocab_list[0][0])
                     if not out:
@@ -183,7 +190,11 @@ class Model(BaseDynetModel):
                 vocab_matrix = dy.transpose(dy.concatenate_cols([rep for _, rep in vocab_list]))
                 pred_vec = vocab_matrix * decoder.output()
                 if out:
-                    best_i = vocab_index.index(out_tokens[0])
+                    try:
+                        best_i = vocab_index.index(out_tokens[0])
+                    except ValueError:
+                        #out_tok = tuple(['edge']+ out_tokens[0].split('_'))
+                        best_i = 0
                     choose(vocab_list[best_i][0])
                     yield dy.pickneglogsoftmax(pred_vec, best_i)
                 else:
