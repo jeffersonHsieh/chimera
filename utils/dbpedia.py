@@ -11,7 +11,7 @@ except ImportError:
 
 from utils.file_system import makedir
 
-cache = "/home/lily/ch956/chimera/dbpedia/"
+cache = "/tmp/dbpedia/"
 makedir(cache)
 
 DBPEDIA = "http://dbpedia.org/"

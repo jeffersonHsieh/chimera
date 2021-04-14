@@ -7,7 +7,6 @@ from typing import List
 
 import xmltodict
 import sys
-sys.path.append('/home/lily/ch956/chimera/')
 from data.E2E.rephrasing import rephrase, rephrase_if_must
 from data.reader import DataReader, DataSetType, Datum
 from utils.delex import concat_entity

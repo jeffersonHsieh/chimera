@@ -11,7 +11,6 @@ from typing import Set, List
 
 from tqdm import tqdm
 import sys
-sys.path.append("/home/lily/ch956/chimera/")
 from utils.delex import concat_entity
 from utils.memoize import memoize
 from utils.time import Time
@@ -54,34 +53,20 @@ class StructuredNode:
         if len(C) == 1:
             
             for l in g:
-                #print(l)
                 if e:
-                    #print(cur_lin + mode + e + "["+l+"]")
                     yield cur_lin + mode + e + " ["+l+"]"
                 else:
-                    #print(cur_lin + mode + l)
                     yield cur_lin + mode + l
         else:
 
             for l in g:
-                #if C[0][1].value == NodeType.OR:
-                #    if l:
-                #        pass
-                        #print(l)
-                #    else:
-                #        for c in C[0][1].children:
-                #            print(c[1].value)
-                #print(l)
-                
                 if e:
                     for l_s in self.traverse(C[1:], cur_lin + mode + e +" [" + l + "]", mode):
                         yield l_s
                 else:
                     for l_s in self.traverse(C[1:], cur_lin + mode + l, mode):
                         yield l_s
-                    
-                #for l_s in self.traverse(C[1:], new_lin, mode):
-                    #yield l_s
+
 
 
 
@@ -94,7 +79,6 @@ class StructuredNode:
             for e1,s1 in self.children:
                 lins = s1.lin()
                 for l in lins:
-                    #print(l)
                     if e1:
                         yield (e1+" ["+ l + "]") 
                     else:
@@ -103,25 +87,19 @@ class StructuredNode:
         else:
             cur_lin = " "
             if self.value == NodeType.SENTENCES:
-                #for c in self.children:
-                #    print(c[1].value)
-                #print('end')
                 g = self.traverse(self.children, cur_lin, mode = ". ")
                 for l in g:
-                    #print(l)
                     yield l
             elif self.value == NodeType.AND:
                 perm = permutations(self.children)
                 for p in perm:
                     g = self.traverse(p, cur_lin, mode = " ")
                     for l in g:
-                        #print(l)
                         yield l
             else:
                 v = self.get_val()
                 g = self.traverse(self.children, cur_lin, mode = " ")
                 for l in g:
-                    #print(v+l)
                     yield v + " "+ l
                 
                         
@@ -441,7 +419,6 @@ if __name__ == "__main__":
     print("exhaustive")
     now = Time.now()
     plans = s.exhaustive_plan()
-    print('linearizing!!!!!!!')
     lins = plans.linearizations(low_mem = True)
     for l in lins:
         print(l)

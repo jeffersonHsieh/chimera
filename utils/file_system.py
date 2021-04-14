@@ -38,14 +38,13 @@ def copyfile(src, dst):
 
 
 def temp_name(suffix=None):
-    fd, path = tempfile.mkstemp(suffix, dir="/data/lily/ch956/chimera/.TEMP")
-    #print('Debug', fd,path)
+    fd, path = tempfile.mkstemp(suffix)
     os.close(fd)  # Close connection so no too-many-connections
     return path
 
 
 def temp_dir():
-    path = tempfile.mkdtemp(dir = '/data/lily/ch956/chimera/.TEMP')
+    path = tempfile.mkdtemp()
     return path + os.sep
 
 
